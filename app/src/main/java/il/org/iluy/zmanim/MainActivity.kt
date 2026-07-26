@@ -26,6 +26,21 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            buildUi()
+        } catch (t: Throwable) {
+            // No ADB/logcat access on this device — show the real error on screen
+            // instead of a silent crash, so it can be photographed and reported.
+            val errorView = TextView(this).apply {
+                text = "שגיאה באתחול:\n\n${t.javaClass.simpleName}: ${t.message}\n\n${t.stackTraceToString().take(2000)}"
+                setPadding(24, 24, 24, 24)
+                textSize = 12f
+            }
+            setContentView(errorView)
+        }
+    }
+
+    private fun buildUi() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

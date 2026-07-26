@@ -40,6 +40,15 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showError(t: Throwable) {
+        val errorView = TextView(this).apply {
+            text = "שגיאה:\n\n${t.javaClass.simpleName}: ${t.message}\n\n${t.stackTraceToString().take(2000)}"
+            setPadding(24, 24, 24, 24)
+            textSize = 12f
+        }
+        setContentView(errorView)
+    }
+
     private fun buildUi() {
 
         val root = LinearLayout(this).apply {
@@ -52,22 +61,38 @@ class MainActivity : Activity() {
 
         val requestPermButton = Button(this).apply {
             text = "בקש הרשאת מיקום"
-            setOnClickListener { requestLocationPermission() }
+            setOnClickListener {
+                try {
+                    requestLocationPermission()
+                } catch (t: Throwable) {
+                    showError(t)
+                }
+            }
         }
         root.addView(requestPermButton)
 
         val scheduleButton = Button(this).apply {
             text = "תזמן התראות יומיות"
             setOnClickListener {
-                AlarmScheduler.scheduleDailyPrecalcAlarms(this@MainActivity)
-                statusView.text = "תוזמן: חישוב שחרית 04:30, חישוב מנחה 11:30"
+                try {
+                    AlarmScheduler.scheduleDailyPrecalcAlarms(this@MainActivity)
+                    statusView.text = "תוזמן: חישוב שחרית 04:30, חישוב מנחה 11:30"
+                } catch (t: Throwable) {
+                    showError(t)
+                }
             }
         }
         root.addView(scheduleButton)
 
         val testNowButton = Button(this).apply {
             text = "בדיקה מיידית (מדמה עכשיו את שרשרת קר\"ש)"
-            setOnClickListener { runImmediateShemaTest() }
+            setOnClickListener {
+                try {
+                    runImmediateShemaTest()
+                } catch (t: Throwable) {
+                    showError(t)
+                }
+            }
         }
         root.addView(testNowButton)
 
@@ -94,21 +119,25 @@ class MainActivity : Activity() {
         val table = DailyZmanimCalculator.sofZmanShemaForAllRegions()
         ZmanimStore.saveShema(this, table)
         LocationOneShot.requestSingleFix(this) { location ->
-            val region = if (location != null) {
-                RegionTable.nearestTo(location.latitude, location.longitude)
-            } else {
-                table.first().region
-            }
-            val match = table.find { it.region.displayName == region.displayName } ?: table.first()
-            NotificationHelper.showZmanAlert(
-                context = this,
-                title = "בדיקה — עוד 10 דק' סוף זמן קר\"ש (מדומה)",
-                regionName = match.region.displayName,
-                syncedAtMillis = System.currentTimeMillis(),
-                notificationId = 999
-            )
-            runOnUiThread {
-                statusView.text = "נשלחה התראת בדיקה. אזור שזוהה: ${match.region.displayName}"
+            try {
+                val region = if (location != null) {
+                    RegionTable.nearestTo(location.latitude, location.longitude)
+                } else {
+                    table.first().region
+                }
+                val match = table.find { it.region.displayName == region.displayName } ?: table.first()
+                NotificationHelper.showZmanAlert(
+                    context = this,
+                    title = "בדיקה — עוד 10 דק' סוף זמן קר\"ש (מדומה)",
+                    regionName = match.region.displayName,
+                    syncedAtMillis = System.currentTimeMillis(),
+                    notificationId = 999
+                )
+                runOnUiThread {
+                    statusView.text = "נשלחה התראת בדיקה. אזור שזוהה: ${match.region.displayName}"
+                }
+            } catch (t: Throwable) {
+                runOnUiThread { showError(t) }
             }
         }
     }
